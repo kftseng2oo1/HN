@@ -476,52 +476,52 @@ async function searchViaProxy(keyword) {
 }
 
 // ─── Parse song.corp.com.tw HTML ─────────────────────────────────────────────
-// 頁面格式（實際）：純文字以 · 分隔，格式為：
-//   數字 · 歌名 · 語言/系統版本 · 歌手
-// 例：3698 · Nothing My Friend · 國 / 音圓 · 豬段桃+合唱
 function parseHongyinHTML(html, keyword) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
   const songs = [];
   const seen = new Set();
 
-  // 取得整個 body 文字，以 · 為分隔符號解析
-  const fullText = doc.body ? doc.body.innerText || doc.body.textContent : '';
+  console.log('[RAW HTML sample]', html.slice(0, 1500));
 
-  // 將全文以 · 切開，掃描找「數字開頭的 token」
-  // 格式：... · 數字 · 歌名 · 語言/版本 · 歌手 · 數字 · ...
-  const tokens = fullText.split('·').map(t => t.trim()).filter(t => t.length > 0);
+  // 把 HTML 去標籤、統一中點符號，再切 token
+  const normalised = html
+    .replace(/&middot;/gi, '\u00b7')
+    .replace(/&#183;/g, '\u00b7')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, '\u00b7')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\u00b7+/g, '\u00b7');
+
+  console.log('[NORM sample]', normalised.slice(0, 600));
+
+  const tokens = normalised.split('\u00b7')
+    .map(t => t.replace(/\s+/g, ' ').trim())
+    .filter(t => t.length > 0);
+
+  console.log('[TOKENS]', JSON.stringify(tokens.slice(0, 30)));
 
   for (let i = 0; i < tokens.length; i++) {
     const tok = tokens[i];
-    // 找到歌號（4~6位數字）
     if (/^\d{4,6}$/.test(tok)) {
       const number = tok;
-      const title  = tokens[i + 1] || '';
-      const ver    = tokens[i + 2] || '';  // 如 "國 / 弘音112-01"
-      const singer = tokens[i + 3] || '';
+      const title  = (tokens[i + 1] || '').trim();
+      const ver    = (tokens[i + 2] || '').trim();
+      const singer = (tokens[i + 3] || '').trim();
 
-      // 過濾掉明顯不是歌曲的 token
-      if (!title || title.length > 40) continue;
-      // 跳過重複
-      const key = `${number}:${title}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
+      if (!title || title.length > 50 || /^\d+$/.test(title) || seen.has(number)) continue;
+      seen.add(number);
 
-      // 語言：從版本欄第一個字判斷（國/台/英/日/粵/兒）
-      const langMatch = ver.match(/^([國台英日粵兒])/);
+      const langMatch = ver.match(/^([國台英日粵兒客])/u);
       const lang = langMatch ? langMatch[1] : '';
-
       songs.push({ number, title, singer, lang, version: ver });
-      i += 3; // 跳過已用的 tokens
+      i += 3;
     }
   }
 
-  // 如果解析不到，顯示除錯訊息
-  if (songs.length === 0) {
-    console.warn('[parse] 未解析到歌曲，原始文字前500字：', fullText.slice(0, 500));
-  }
-
+  console.log('[RESULT]', songs.length, 'songs', songs.slice(0, 3));
   return songs;
 }
 
