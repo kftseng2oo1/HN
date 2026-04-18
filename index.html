@@ -1,15 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
-<head>
+<html lang="zh-TW"><head><!-- PWA Meta — auto-injected by PWA 打包神器 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>泓音點歌查詢</title>
-<link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="泓音點歌">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<meta name="theme-color" content="#e8a020">
+
+
+
+
+
+
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Rajdhani:wght@600;700&display=swap');
 
@@ -405,7 +404,14 @@
 
   .sys-btn:active { transform: scale(0.93); }
 </style>
-</head>
+<meta name="application-name" content="點歌查詢系統"><meta name="description" content=""><meta name="theme-color" content="#1a73e8"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="點歌查詢系統"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon.svg"><script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(r => console.log('[SW] registered:', r.scope))
+        .catch(e => console.warn('[SW] registration failed:', e));
+    });
+  }</script></head>
 <body>
 <div class="container">
   <header>
@@ -434,14 +440,11 @@
   </div>
 
   <div id="proxy-notice" class="proxy-notice" style="font-size:0.75rem;padding:8px 12px;">
-    ⚡ Worker：<input id="workerUrl" type="text" value="https://honyin.kftseng2oo1.workers.dev"
-      style="background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:3px 7px;color:var(--text);font-size:0.75rem;width:calc(100% - 70px);font-family:monospace;vertical-align:middle;">
+    ⚡ Worker：<input id="workerUrl" type="text" value="https://honyin.kftseng2oo1.workers.dev" style="background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:3px 7px;color:var(--text);font-size:0.75rem;width:calc(100% - 70px);font-family:monospace;vertical-align:middle;">
   </div>
 
   <div class="search-wrap">
-    <input class="search-input" type="text" id="searchInput"
-      placeholder="輸入歌名或歌手…" autocomplete="off"
-      inputmode="search">
+    <input class="search-input" type="text" id="searchInput" placeholder="輸入歌名或歌手…" autocomplete="off" inputmode="search">
     <button class="search-btn" onclick="doSearch()" title="搜尋">🔍</button>
   </div>
 
@@ -677,14 +680,4 @@ async function copyNum(btn, num) {
 }
 </script>
 
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(r => console.log('SW registered'))
-      .catch(e => console.warn('SW failed:', e));
-  });
-}
-<\/script>
-</body>
-</html>
+</body></html>
