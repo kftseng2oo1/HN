@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>泓音點歌查詢</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="泓音點歌">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="theme-color" content="#e8a020">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Rajdhani:wght@600;700&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131c;
+    --card: #1a1a28;
+    --border: #2a2a40;
+    --accent: #e8a020;
+    --accent2: #c06010;
+    --text: #e8e0d0;
+    --muted: #7070a0;
+    --result-bg: #16162a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Serif TC', serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(232,160,32,0.08) 0%, transparent 70%),
+      repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(255,255,255,0.01) 40px, rgba(255,255,255,0.01) 41px),
+      repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,0.01) 40px, rgba(255,255,255,0.01) 41px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 680px;
+    padding: 0 16px 80px;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    padding: 48px 0 36px;
+  }
+
+  .brand-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    box-shadow: 0 8px 32px rgba(232,160,32,0.3);
+  }
+
+  h1 {
+    font-size: clamp(1.6rem, 5vw, 2.2rem);
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    background: linear-gradient(135deg, #f0d080, var(--accent), #c06010);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.2;
+  }
+
+  .subtitle {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-family: 'Rajdhani', sans-serif;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* Search box */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 12px;
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 60px 18px 20px;
+    font-size: 1.05rem;
+    font-family: 'Noto Serif TC', serif;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .search-input::placeholder { color: var(--muted); }
+
+  .search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(232,160,32,0.12);
+  }
+
+  .search-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 10px;
+    width: 42px;
+    height: 42px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+
+  .search-btn:active { transform: translateY(-50%) scale(0.92); }
+  .search-btn:hover { opacity: 0.85; }
+
+  /* Filter row */
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+
+  .filter-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Noto Serif TC', serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+
+  .filter-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 700;
+  }
+
+  /* Status / loading */
+  .status-bar {
+    text-align: center;
+    padding: 12px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    min-height: 36px;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Results */
+  .results-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .result-card {
+    background: var(--result-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    animation: fadeUp 0.25s ease both;
+    transition: border-color 0.18s;
+    cursor: default;
+  }
+
+  .result-card:hover { border-color: var(--accent); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .song-number {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 80px;
+    letter-spacing: 0.05em;
+    line-height: 1;
+  }
+
+  .song-info { flex: 1; min-width: 0; }
+
+  .song-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .song-meta {
+    margin-top: 4px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .lang-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  .lang-國 { background: #1a2840; color: #6090e0; }
+  .lang-台 { background: #2a1a10; color: #e06030; }
+  .lang-英 { background: #1a2a1a; color: #50a050; }
+  .lang-日 { background: #2a1a2a; color: #c060c0; }
+  .lang-粵 { background: #2a2a10; color: #b0b020; }
+
+  .copy-btn {
+    background: transparent;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-family: 'Noto Serif TC', serif;
+    transition: all 0.18s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .copy-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .copy-btn.copied {
+    border-color: #40a040;
+    color: #40a040;
+  }
+
+  /* Empty / error state */
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--muted);
+  }
+
+  .empty-state .big { font-size: 2.5rem; margin-bottom: 12px; }
+  .empty-state p { font-size: 0.9rem; line-height: 1.7; }
+
+  /* Proxy notice */
+  .proxy-notice {
+    background: rgba(232,160,32,0.06);
+    border: 1px solid rgba(232,160,32,0.2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  .proxy-notice code {
+    color: var(--accent);
+    font-family: monospace;
+    font-size: 0.82em;
+    background: rgba(232,160,32,0.1);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  .proxy-notice a { color: var(--accent); text-decoration: none; }
+
+  /* Mode tabs */
+  .mode-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 16px;
+  }
+
+  .mode-tab {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Noto Serif TC', serif;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+
+  .mode-tab.active {
+    background: var(--card);
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  /* Result count */
+  .result-count {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 12px;
+    font-family: 'Rajdhani', sans-serif;
+    letter-spacing: 0.05em;
+  }
+
+  .result-count span { color: var(--accent); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="brand-icon">🎤</div>
+    <h1>泓音點歌查詢</h1>
+    <div class="subtitle">弘音系統 · 歌號速查</div>
+  </header>
+
+  <div class="mode-tabs">
+    <button class="mode-tab active" onclick="switchMode('proxy')" id="tab-proxy">🌐 線上查詢</button>
+    <button class="mode-tab" onclick="switchMode('local')" id="tab-local">📦 本機資料</button>
+  </div>
+
+  <div id="proxy-notice" class="proxy-notice">
+    ⚡ 透過 Cloudflare Worker 代理查詢 <code>song.corp.com.tw</code> 弘音歌單<br>
+    請在下方設定你的 Worker 網址（預設使用 <code>arcar.kftseng2oo1.workers.dev</code>）<br>
+    Worker 需支援：<code>?url=https://song.corp.com.tw/songs.aspx?company=弘音&keyword=xxx</code>
+    <br><br>
+    <label style="color:var(--text);font-size:0.82rem;">Worker 網址：
+      <input id="workerUrl" type="text" 
+        value="https://arcar.kftseng2oo1.workers.dev"
+        style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-size:0.82rem;width:100%;margin-top:4px;font-family:monospace;">
+    </label>
+  </div>
+
+  <div class="search-wrap">
+    <input class="search-input" type="text" id="searchInput"
+      placeholder="輸入歌名或歌手…" autocomplete="off"
+      inputmode="search">
+    <button class="search-btn" onclick="doSearch()" title="搜尋">🔍</button>
+  </div>
+
+  <div class="filter-row" id="langFilter">
+    <button class="filter-btn active" onclick="setLang('')">全部</button>
+    <button class="filter-btn" onclick="setLang('國')">國語</button>
+    <button class="filter-btn" onclick="setLang('台')">台語</button>
+    <button class="filter-btn" onclick="setLang('英')">英語</button>
+    <button class="filter-btn" onclick="setLang('日')">日語</button>
+    <button class="filter-btn" onclick="setLang('粵')">粵語</button>
+  </div>
+
+  <div class="status-bar" id="statusBar"></div>
+  <div id="resultCount" class="result-count" style="display:none"></div>
+  <div class="results-list" id="results"></div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let currentMode = 'proxy';
+let currentLang = '';
+let allResults = [];
+let lastQuery = '';
+
+// ─── Mode switch ─────────────────────────────────────────────────────────────
+function switchMode(mode) {
+  currentMode = mode;
+  document.getElementById('tab-proxy').classList.toggle('active', mode === 'proxy');
+  document.getElementById('tab-local').classList.toggle('active', mode === 'local');
+  document.getElementById('proxy-notice').style.display = mode === 'proxy' ? '' : 'none';
+  clearResults();
+  if (mode === 'local') {
+    setStatus('本機模式：使用內建示範資料（僅供測試）');
+  }
+}
+
+// ─── Language filter ──────────────────────────────────────────────────────────
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  if (lastQuery) renderResults(allResults);
+}
+
+// ─── Search ───────────────────────────────────────────────────────────────────
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+
+async function doSearch() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) { setStatus('請輸入歌名或歌手'); return; }
+  lastQuery = q;
+
+  clearResults();
+  setStatus('<span class="spinner"></span>查詢中…');
+
+  if (currentMode === 'proxy') {
+    await searchViaProxy(q);
+  } else {
+    searchLocal(q);
+  }
+}
+
+// ─── Proxy mode: fetch via Cloudflare Worker ──────────────────────────────────
+async function searchViaProxy(keyword) {
+  const workerBase = document.getElementById('workerUrl').value.trim().replace(/\/$/, '');
+  const target = `https://song.corp.com.tw/songs.aspx?company=%E5%BC%98%E9%9F%B3&keyword=${encodeURIComponent(keyword)}`;
+  const url = `${workerBase}?url=${encodeURIComponent(target)}`;
+
+  try {
+    const res = await fetch(url, { headers: { 'Accept': 'text/html' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const html = await res.text();
+    const songs = parseHongyinHTML(html);
+    allResults = songs;
+    setStatus('');
+    renderResults(songs);
+  } catch (err) {
+    setStatus(`⚠️ 查詢失敗：${err.message}。請確認 Worker 網址正確。`);
+    console.error(err);
+  }
+}
+
+// ─── Parse song.corp.com.tw HTML ─────────────────────────────────────────────
+function parseHongyinHTML(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const songs = [];
+
+  // song.corp.com.tw 結構：每列包含 編號 / 歌名 / 語言/版本 / 歌手
+  // 找所有含 data 的 tr 或 div
+  const rows = doc.querySelectorAll('table tr, .song-row, li.song');
+
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    if (cells.length >= 3) {
+      const num = cells[0]?.textContent.trim();
+      const title = cells[1]?.textContent.trim();
+      const meta = cells[2]?.textContent.trim();
+      const singer = cells[3]?.textContent.trim() || '';
+      if (/^\d{4,6}$/.test(num) && title) {
+        const langMatch = meta.match(/^([國台英日粵])/);
+        songs.push({
+          number: num,
+          title,
+          singer,
+          lang: langMatch ? langMatch[1] : '',
+          version: meta
+        });
+      }
+    }
+  });
+
+  // 備用：抓純文字格式 "數字 · 歌名 · 語言 · 歌手"
+  if (songs.length === 0) {
+    const text = doc.body?.innerText || doc.body?.textContent || '';
+    const lines = text.split('\n');
+    lines.forEach(line => {
+      const parts = line.split('·').map(s => s.trim()).filter(Boolean);
+      if (parts.length >= 3 && /^\d{4,6}$/.test(parts[0])) {
+        const langMatch = parts[1]?.match(/^([國台英日粵])/);
+        songs.push({
+          number: parts[0],
+          title: parts[1] || '',
+          singer: parts[parts.length - 1],
+          lang: langMatch ? langMatch[1] : '',
+          version: parts[2] || ''
+        });
+      }
+    });
+  }
+
+  return songs;
+}
+
+// ─── Local / demo mode ────────────────────────────────────────────────────────
+const demoData = [
+  { number: '12345', title: '月亮代表我的心', singer: '鄧麗君', lang: '國', version: '國/弘音' },
+  { number: '23456', title: '你的樣子', singer: '羅大佑', lang: '國', version: '國/弘音' },
+  { number: '34567', title: '愛你一萬年', singer: '伍佰', lang: '台', version: '台/弘音' },
+  { number: '45678', title: '戀愛ing', singer: '五月天', lang: '國', version: '國/弘音' },
+  { number: '56789', title: '雨天', singer: '孫燕姿', lang: '國', version: '國/弘音' },
+  { number: '67890', title: '望春風', singer: '江蕙', lang: '台', version: '台/弘音' },
+  { number: '78901', title: '愛情恰恰', singer: '蔡依林', lang: '國', version: '國/弘音' },
+];
+
+function searchLocal(q) {
+  const matched = demoData.filter(s =>
+    s.title.includes(q) || s.singer.includes(q)
+  );
+  allResults = matched;
+  setStatus('');
+  renderResults(matched);
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function renderResults(songs) {
+  const filtered = currentLang
+    ? songs.filter(s => s.lang === currentLang)
+    : songs;
+
+  const container = document.getElementById('results');
+  const countEl = document.getElementById('resultCount');
+  container.innerHTML = '';
+
+  if (filtered.length === 0) {
+    countEl.style.display = 'none';
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="big">🎵</div>
+        <p>找不到「${escHtml(lastQuery)}」的弘音歌曲<br>試試其他關鍵字或換個語言分類</p>
+      </div>`;
+    return;
+  }
+
+  countEl.style.display = '';
+  countEl.innerHTML = `共找到 <span>${filtered.length}</span> 首`;
+
+  filtered.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    card.style.animationDelay = `${i * 0.04}s`;
+    card.innerHTML = `
+      <div class="song-number">${escHtml(s.number)}</div>
+      <div class="song-info">
+        <div class="song-title">${escHtml(s.title)}</div>
+        <div class="song-meta">
+          ${s.lang ? `<span class="lang-tag lang-${s.lang}">${s.lang}語</span>` : ''}
+          <span>${escHtml(s.singer)}</span>
+          ${s.version ? `<span>${escHtml(s.version)}</span>` : ''}
+        </div>
+      </div>
+      <button class="copy-btn" onclick="copyNum(this, '${escHtml(s.number)}')">複製號碼</button>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function clearResults() {
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('resultCount').style.display = 'none';
+}
+
+function setStatus(html) {
+  document.getElementById('statusBar').innerHTML = html;
+}
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+async function copyNum(btn, num) {
+  try {
+    await navigator.clipboard.writeText(num);
+    btn.textContent = '✓ 已複製';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '複製號碼';
+      btn.classList.remove('copied');
+    }, 1800);
+  } catch {
+    btn.textContent = num;
+  }
+}
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(r => console.log('SW registered'))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+<\/script>
+</body>
+</html>
