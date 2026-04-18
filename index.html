@@ -457,6 +457,7 @@ async function doSearch() {
 // ─── Proxy mode: fetch via Cloudflare Worker ──────────────────────────────────
 async function searchViaProxy(keyword) {
   const workerBase = document.getElementById('workerUrl').value.trim().replace(/\/$/, '');
+  // songs.aspx 會列出「編號 · 歌名 · 語言/版本 · 歌手」格式
   const target = `https://song.corp.com.tw/songs.aspx?company=%E5%BC%98%E9%9F%B3&keyword=${encodeURIComponent(keyword)}`;
   const url = `${workerBase}?url=${encodeURIComponent(target)}`;
 
@@ -464,7 +465,7 @@ async function searchViaProxy(keyword) {
     const res = await fetch(url, { headers: { 'Accept': 'text/html' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const html = await res.text();
-    const songs = parseHongyinHTML(html);
+    const songs = parseHongyinHTML(html, keyword);
     allResults = songs;
     setStatus('');
     renderResults(songs);
@@ -475,52 +476,50 @@ async function searchViaProxy(keyword) {
 }
 
 // ─── Parse song.corp.com.tw HTML ─────────────────────────────────────────────
-function parseHongyinHTML(html) {
+// 頁面格式（實際）：純文字以 · 分隔，格式為：
+//   數字 · 歌名 · 語言/系統版本 · 歌手
+// 例：3698 · Nothing My Friend · 國 / 音圓 · 豬段桃+合唱
+function parseHongyinHTML(html, keyword) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   const songs = [];
+  const seen = new Set();
 
-  // song.corp.com.tw 結構：每列包含 編號 / 歌名 / 語言/版本 / 歌手
-  // 找所有含 data 的 tr 或 div
-  const rows = doc.querySelectorAll('table tr, .song-row, li.song');
+  // 取得整個 body 文字，以 · 為分隔符號解析
+  const fullText = doc.body ? doc.body.innerText || doc.body.textContent : '';
 
-  rows.forEach(row => {
-    const cells = row.querySelectorAll('td');
-    if (cells.length >= 3) {
-      const num = cells[0]?.textContent.trim();
-      const title = cells[1]?.textContent.trim();
-      const meta = cells[2]?.textContent.trim();
-      const singer = cells[3]?.textContent.trim() || '';
-      if (/^\d{4,6}$/.test(num) && title) {
-        const langMatch = meta.match(/^([國台英日粵])/);
-        songs.push({
-          number: num,
-          title,
-          singer,
-          lang: langMatch ? langMatch[1] : '',
-          version: meta
-        });
-      }
+  // 將全文以 · 切開，掃描找「數字開頭的 token」
+  // 格式：... · 數字 · 歌名 · 語言/版本 · 歌手 · 數字 · ...
+  const tokens = fullText.split('·').map(t => t.trim()).filter(t => t.length > 0);
+
+  for (let i = 0; i < tokens.length; i++) {
+    const tok = tokens[i];
+    // 找到歌號（4~6位數字）
+    if (/^\d{4,6}$/.test(tok)) {
+      const number = tok;
+      const title  = tokens[i + 1] || '';
+      const ver    = tokens[i + 2] || '';  // 如 "國 / 弘音112-01"
+      const singer = tokens[i + 3] || '';
+
+      // 過濾掉明顯不是歌曲的 token
+      if (!title || title.length > 40) continue;
+      // 跳過重複
+      const key = `${number}:${title}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      // 語言：從版本欄第一個字判斷（國/台/英/日/粵/兒）
+      const langMatch = ver.match(/^([國台英日粵兒])/);
+      const lang = langMatch ? langMatch[1] : '';
+
+      songs.push({ number, title, singer, lang, version: ver });
+      i += 3; // 跳過已用的 tokens
     }
-  });
+  }
 
-  // 備用：抓純文字格式 "數字 · 歌名 · 語言 · 歌手"
+  // 如果解析不到，顯示除錯訊息
   if (songs.length === 0) {
-    const text = doc.body?.innerText || doc.body?.textContent || '';
-    const lines = text.split('\n');
-    lines.forEach(line => {
-      const parts = line.split('·').map(s => s.trim()).filter(Boolean);
-      if (parts.length >= 3 && /^\d{4,6}$/.test(parts[0])) {
-        const langMatch = parts[1]?.match(/^([國台英日粵])/);
-        songs.push({
-          number: parts[0],
-          title: parts[1] || '',
-          singer: parts[parts.length - 1],
-          lang: langMatch ? langMatch[1] : '',
-          version: parts[2] || ''
-        });
-      }
-    });
+    console.warn('[parse] 未解析到歌曲，原始文字前500字：', fullText.slice(0, 500));
   }
 
   return songs;
