@@ -359,31 +359,83 @@
   }
 
   .result-count span { color: var(--accent); font-weight: 700; }
+
+  /* System selector */
+  .system-selector {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+
+  .sys-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    font-family: 'Rajdhani', sans-serif;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .sys-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .sys-btn {
+    padding: 5px 12px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Noto Serif TC', serif;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .sys-btn.active {
+    background: rgba(232,160,32,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .sys-btn:active { transform: scale(0.93); }
 </style>
 </head>
 <body>
 <div class="container">
   <header>
     <div class="brand-icon">🎤</div>
-    <h1>泓音點歌查詢</h1>
-    <div class="subtitle">弘音系統 · 歌號速查</div>
+    <h1>點歌系統查詢</h1>
+    <div class="subtitle">多系統歌號速查</div>
   </header>
 
-  <div class="mode-tabs">
-    <button class="mode-tab active" onclick="switchMode('proxy')" id="tab-proxy">🌐 線上查詢</button>
-    <button class="mode-tab" onclick="switchMode('local')" id="tab-local">📦 本機資料</button>
+  <!-- 系統選擇 -->
+  <div class="system-selector" id="systemSelector">
+    <div class="sys-label">點歌系統</div>
+    <div class="sys-grid" id="sysGrid">
+      <button class="sys-btn active" data-sys="弘音" onclick="setSys(this)">弘音</button>
+      <button class="sys-btn" data-sys="音圓" onclick="setSys(this)">音圓</button>
+      <button class="sys-btn" data-sys="金嗓" onclick="setSys(this)">金嗓</button>
+      <button class="sys-btn" data-sys="瑞影" onclick="setSys(this)">瑞影</button>
+      <button class="sys-btn" data-sys="點將家" onclick="setSys(this)">點將家</button>
+      <button class="sys-btn" data-sys="嘉揚" onclick="setSys(this)">嘉揚</button>
+      <button class="sys-btn" data-sys="美華" onclick="setSys(this)">美華</button>
+      <button class="sys-btn" data-sys="音遊" onclick="setSys(this)">音遊</button>
+      <button class="sys-btn" data-sys="大唐" onclick="setSys(this)">大唐</button>
+      <button class="sys-btn" data-sys="錢櫃" onclick="setSys(this)">錢櫃</button>
+      <button class="sys-btn" data-sys="好樂迪" onclick="setSys(this)">好樂迪</button>
+      <button class="sys-btn" data-sys="享溫馨" onclick="setSys(this)">享溫馨</button>
+    </div>
   </div>
 
-  <div id="proxy-notice" class="proxy-notice">
-    ⚡ 透過 Cloudflare Worker 代理查詢 <code>song.corp.com.tw</code> 弘音歌單<br>
-    請在下方設定你的 Worker 網址（預設使用 <code>arcar.kftseng2oo1.workers.dev</code>）<br>
-    Worker 需支援：<code>?url=https://song.corp.com.tw/songs.aspx?company=弘音&keyword=xxx</code>
-    <br><br>
-    <label style="color:var(--text);font-size:0.82rem;">Worker 網址：
-      <input id="workerUrl" type="text" 
-        value="https://honyin.kftseng2oo1.workers.dev"
-        style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-size:0.82rem;width:100%;margin-top:4px;font-family:monospace;">
-    </label>
+  <div id="proxy-notice" class="proxy-notice" style="font-size:0.75rem;padding:8px 12px;">
+    ⚡ Worker：<input id="workerUrl" type="text" value="https://honyin.kftseng2oo1.workers.dev"
+      style="background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:3px 7px;color:var(--text);font-size:0.75rem;width:calc(100% - 70px);font-family:monospace;vertical-align:middle;">
   </div>
 
   <div class="search-wrap">
@@ -411,19 +463,23 @@
 // ─── State ───────────────────────────────────────────────────────────────────
 let currentMode = 'proxy';
 let currentLang = '';
+let currentSys  = '弘音';
 let allResults = [];
 let lastQuery = '';
+
+// ─── System switch ────────────────────────────────────────────────────────────
+function setSys(btn) {
+  currentSys = btn.dataset.sys;
+  document.querySelectorAll('.sys-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  clearResults();
+  setStatus('已切換至 ' + currentSys + ' 系統');
+}
 
 // ─── Mode switch ─────────────────────────────────────────────────────────────
 function switchMode(mode) {
   currentMode = mode;
-  document.getElementById('tab-proxy').classList.toggle('active', mode === 'proxy');
-  document.getElementById('tab-local').classList.toggle('active', mode === 'local');
-  document.getElementById('proxy-notice').style.display = mode === 'proxy' ? '' : 'none';
   clearResults();
-  if (mode === 'local') {
-    setStatus('本機模式：使用內建示範資料（僅供測試）');
-  }
 }
 
 // ─── Language filter ──────────────────────────────────────────────────────────
@@ -458,7 +514,7 @@ async function doSearch() {
 async function searchViaProxy(keyword) {
   const workerBase = document.getElementById('workerUrl').value.trim().replace(/\/$/, '');
   // songs.aspx 會列出「編號 · 歌名 · 語言/版本 · 歌手」格式
-  const target = `https://song.corp.com.tw/songs.aspx?company=%E5%BC%98%E9%9F%B3&keyword=${encodeURIComponent(keyword)}`;
+  const target = `https://song.corp.com.tw/songs.aspx?company=${encodeURIComponent(currentSys)}&keyword=${encodeURIComponent(keyword)}`;
   const url = `${workerBase}?url=${encodeURIComponent(target)}`;
 
   try {
