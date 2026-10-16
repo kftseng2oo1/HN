@@ -18,5 +18,3 @@ KTV 點歌號碼查詢：輸入歌名或歌手，找出各點歌系統的歌曲�
 ## 技術與依賴
 - 單檔 HTML PWA（`index.html` 內含全部 HTML/CSS/JS），`manifest.json` + `sw.js` 提供安裝到主畫面與離線快取。
 
-## 備註
-- repo 內另有檔名含空白的 `index .html`，內容與 `index.html` 不同，應為舊版殘留。
