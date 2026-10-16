@@ -1,44 +1,22 @@
-# 點歌查詢系統
+# 泓音點歌查詢
 
-> 一個 Progressive Web App
+KTV 點歌號碼查詢：輸入歌名或歌手，找出各點歌系統的歌曲編號並一鍵複製。
 
-## 📦 包含檔案
+**線上使用**：https://kftseng2oo1.github.io/HN/
 
-- `icon-192.png`
-- `icon-512.png`
-- `manifest.json`
-- `sw.js`
-- `index.html`
-- `icon.svg`
-- `icon-maskable.svg`
-- `offline.html`
+## 主要功能
+- 點歌系統：弘音、音圓、金嗓、瑞影、點將家、嘉揚、美華、音遊、大唐、錢櫃、好樂迪、享溫馨
+- 語言篩選：國語、台語、英語、日語、粵語
+- 查詢結果點「複製號碼」
 
-## 🚀 部署到 GitHub Pages
+## 查詢方式
+- **代理模式**：經 `honyin.kftseng2oo1.workers.dev` 抓取弘音官網（`song.corp.com.tw`）的結果並解析
+- **本機模式**：只有少量內建示範歌曲，用來測試介面
 
-```bash
-git init
-git add .
-git commit -m "init: 點歌查詢系統 PWA"
-git branch -M main
-git remote add origin https://github.com/<username>/<repo>.git
-git push -u origin main
-```
+目前只有弘音有實際的線上查詢，其他系統按鈕只切換標示。
 
-然後在 GitHub repo → **Settings → Pages** → Source 選 `main` 分支，等待幾分鐘後即可訪問。
+## 技術與依賴
+- 單檔 HTML PWA（`index.html` 內含全部 HTML/CSS/JS），`manifest.json` + `sw.js` 提供安裝到主畫面與離線快取。
 
-## 📱 安裝 PWA
-
-在支援的瀏覽器（Chrome / Edge / Safari iOS）中打開網頁，  
-點擊「**安裝**」或「**加入主畫面**」即可將此 App 安裝到裝置。
-
-## ⚙ 技術規格
-
-| 項目 | 值 |
-|------|-----|
-| display | standalone |
-| theme_color | #1a73e8 |
-| lang | zh-TW |
-| scope | /HN/ |
-
----
-*由 [PWA 打包神器](https://github.com) 自動生成*
+## 備註
+- repo 內另有檔名含空白的 `index .html`，內容與 `index.html` 不同，應為舊版殘留。
